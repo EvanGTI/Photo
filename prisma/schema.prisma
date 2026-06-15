@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── 用户与认证 ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(CUSTOMER)
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+// ─── 作品与产品 ─────────────────────────────────────────────
+
+model Photo {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  description String?   @db.Text
+  story       String?   @db.Text
+  category    String
+  tags        String[]
+  previewUrl  String
+  previewId   String
+  rawUrl      String
+  rawId       String
+  width       Int
+  height      Int
+  exif        Json?
+  featured    Boolean   @default(false)
+  published   Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  viewCount   Int       @default(0)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([category])
+  @@index([featured])
+  @@index([published])
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  photoId     String
+  photo       Photo       @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  type        ProductType
+  name        String
+  description String?
+  price       Decimal     @db.Decimal(10, 2)
+  currency    String      @default("CNY")
+  specs       Json?
+  stock       Int?
+  active      Boolean     @default(true)
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([photoId])
+}
+
+enum ProductType {
+  DIGITAL
+  PRINT
+  LICENSE
+  SERVICE
+}
+
+// ─── 订单系统 ─────────────────────────────────────────────
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNo     String      @unique
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id])
+  guestEmail  String?
+  guestName   String?
+  items       OrderItem[]
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  currency    String      @default("CNY")
+  note        String?
+  payment     Payment?
+  address     Address?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id             String    @id @default(cuid())
+  orderId        String
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id])
+  quantity       Int       @default(1)
+  unitPrice      Decimal   @db.Decimal(10, 2)
+  downloadToken  String?   @unique
+  downloadCount  Int       @default(0)
+  maxDownloads   Int       @default(5)
+  tokenExpiresAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([orderId])
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+// ─── 支付 ─────────────────────────────────────────────────
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id])
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  amount        Decimal       @db.Decimal(10, 2)
+  currency      String        @default("CNY")
+  transactionId String?       @unique
+  outTradeNo    String?       @unique
+  rawResponse   Json?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+enum PaymentMethod {
+  ALIPAY
+  WECHAT
+  STRIPE
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+// ─── 收货地址 ─────────────────────────────────────────────
+
+model Address {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  name      String
+  phone     String
+  province  String
+  city      String
+  district  String
+  street    String
+  zipCode   String?
+  createdAt DateTime @default(now())
+}
+
+// ─── 网站设置 ─────────────────────────────────────────────
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}

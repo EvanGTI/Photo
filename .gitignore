@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/app/generated/prisma
+
+# 微信支付证书（绝对不能提交）
+/certs/
+
+# 本地上传临时文件
+/uploads/tmp/

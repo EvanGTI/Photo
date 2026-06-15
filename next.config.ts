@@ -1,7 +1,20 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "api.qrserver.com",
+      },
+    ],
+  },
+  // 防止服务器端导入 fs（Wechatpay 用到）
+  serverExternalPackages: ["wechatpay-node-v3", "sharp"],
+}
 
-export default nextConfig;
+export default nextConfig
