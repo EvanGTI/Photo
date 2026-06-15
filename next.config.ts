@@ -1,6 +1,7 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
+  output: "standalone",   // 腾讯云容器部署必需
   images: {
     remotePatterns: [
       {
